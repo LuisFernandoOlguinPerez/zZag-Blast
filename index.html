@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Zig Zag Boom [Game]</title>
+    <meta name="viewport" content="width=device-width,initiale-scale=1,maximum-scale=1"/>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600&display=swap');
+body {
+    margin:0 auto;
+    width:100%;
+    height:100%;
+    background:#000;
+    font-family:'Teko',arial,monospace;
+    position:absolute;
+    left:0px;
+    top:0px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+#loading{
+  position:absolute;
+  top:0px;
+  left:0px;
+  width:100%;
+  height:100vh;
+  background:#000000;
+  color:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:25px;
+  overflow-y:hidden;
+  overflow-x:hidden;
+  z-index:3;
+}
+#cnv{
+  position:absolute;
+  top:50%;
+  left:0%;
+  background:#000;
+  transform:translateX(-50%) translateY(-50%);
+}
+#menu{
+  position:absolute;
+  top:50%;
+  left:50%;
+  background:transparent;
+  display:none;
+}
+#menu.play::before{
+  content:attr(score);
+  position:absolute;
+  color:#ffffff;
+  right:0;
+  margin:14px 10px;
+  font-size:40px;
+  font-weight:500;
+}
+#menu.play::after{
+  content:attr(hscore);
+  position:absolute;
+  color:#ffffff;
+  left:0;
+  margin:4px;
+  font-size:18px;
+  font-weight:600;
+}
+#menu.play,#menu.gover{
+  pointer-events:none;
+}
+#playbtn{
+  position:absolute;
+  bottom:20%;
+  left:calc(50% - 50px);
+  width:110px;
+  height:65px;
+  background:#ffaa00;
+  border-radius:8px;
+  border-bottom:4px solid rgba(0,0,0,0.5);
+  transition:.3s;
+}
+#menu.play>#playbtn,#menu.gover>#playbtn,.play>#msg1,#msg2,#msg3,.gover>#next,.play>#next,.gover>#last,.play>#last{
+  display:none;
+}
+#playbtn:active{
+  transition:0s;
+  transform:scale(.95);
+  border-bottom:1px solid rgba(0,0,0,0.5);
+}
+#playbtn::before{
+  content:'';
+  position:absolute;
+  top:calc(50% - 19px);
+  left:calc(50% - 15px);
+  width:0;
+  height:0;
+  border:20px solid transparent;
+  border-left:40px solid #ff8800;
+  filter:drop-shadow(0 -1px 0 rgba(0,0,0,0.5));
+}
+#msg1,#msg2,#msg3{
+    color:#ffffff;
+    position:absolute;
+    width:100%;
+    text-align:center;
+}
+#msg1{
+  bottom:65%;
+  font-size:50px;
+  font-weight:600;
+  color:#ff3311;
+}
+.start>#msg1{
+  color:#ffffff;
+}
+.gover>#msg2{
+  display:block;
+  bottom:45%;
+  font-size:25px;
+  font-weight:600;
+  color:#00ccff;
+}
+.gover>#msg3{
+  display:block;
+  bottom:calc(45% - 8ch);
+  font-size:25px;
+  font-weight:600;
+}
+#next,#last{
+  position:absolute;
+  width:50px;
+  height:50px;
+  top:calc(50% - 25px);
+  transition:.3s;
+}
+#next::before,#last::before{
+  content:"";
+  position:absolute;
+  width:10px;
+  height:10px;
+  top:50%;
+  left:50%;
+  border:solid 10px #ffffff;
+  transform:translateX(-75%) translateY(-50%) rotate(45deg);
+  opacity:0.5;
+}
+#last{
+  left:30px;
+}
+#last::before{
+  border-right-color:transparent;
+  border-top-color:transparent;
+  transform:translateX(-25%) translateY(-50%) rotate(45deg);
+}
+#next{
+  right:30px;
+}
+#next::before{
+  border-left-color:transparent;
+  border-bottom-color:transparent;
+}
+#next:active,#last:active{
+  transform:scale(.9);
+  transition:0s;
+}
+
+    </style>
+    </head>
+    <body onload="yf()" onkeydown="desplazar(this)">
+<div id="loading">Cargando..</div>
+<audio id="bg">
+  <source type="audio/mpeg" src="https://raw.githubusercontent.com/zak00aria/web_games/main/zig%20zag%20boom/audio/zig%20zag.mp3"/>
+</audio>
+<audio id="e">
+  <source type="audio/ogg" src="https://raw.githubusercontent.com/zak00aria/web_games/main/zig%20zag%20boom/audio/laser.ogg"/>
+</audio>
+<canvas id="cnv" width="460" height="1004"></canvas>
+<div id="menu" class="start" score="0" hscore="Mayor puntuación: 0">
+<div id="msg1">Jugar</div>
+
+<div id="msg2"></div>
+<div id="msg3"></div>
+<div id="playbtn" onclick="changedir('')"></div>
+<div id="last" onclick="changeplayerbg(-1)"></div>
+<div id="next" onclick="changeplayerbg(1)"></div>
+</div>
+<script>
+var dict;function desplazar(t){switch(t.which){case 37:changedir("left");break;case 39:changedir("right")}}var cnv,ctx,w,h,player,camera,Game,interval,bgsound,esound,s,scale=.8,score=0,hscore=0,playerbg=1,angle=-Math.PI/5;function yf(){getdata(),setTimeout(function(){var t,e,a,s;document.body.removeChild(document.getElementById("loading")),document.getElementById("menu").style.display="block",document.getElementById("cnv").style.left="50%",document.onkeydown=desplazar,cnv.ontouchstart=function(i){t=i.touches[0].clientX,e=i.touches[0].clientY,a=t,s=e},cnv.ontouchmove=function(t){a=t.touches[0].clientX,s=t.touches[0].clientY},cnv.ontouchend=function(i){s<e-15&&changedir("right"),a>t+15&&changedir("right"),s>e+15&&changedir("left"),a<t-15&&changedir("left")}},1250),cnv=document.getElementById("cnv"),ctx=cnv.getContext("2d"),w=cnv.offsetWidth,h=cnv.offsetHeight,w>document.body.offsetWidth&&(w=document.body.offsetWidth),h>document.body.offsetHeight&&(h=document.body.offsetHeight),bgsound=document.getElementById("bg"),esound=document.getElementById("e"),document.getElementById("menu").style="width:"+w+"px;height:"+h+"px;transform:translateX(-50%) translateY(-50%);",w*=scale,h*=scale,cnv.width=w,cnv.height=h,cnv.style="transform:translateX(-50%) translateY(-50%) scale("+1/scale+");",ctx.translate(w/2,h/2),ctx.rotate(angle),s=Math.sqrt(w*w+h*h),player=new Player,camera=new Camera;var t=function(){ctx.save(),ctx.fillStyle="rgba(0,0,0,0.65)",Game.state==Game.states.START?(ctx.rotate(-angle),ctx.fillRect(player.x-w/2,player.y-h/2,w,h)):(bgsound.pause(),bgsound.currentTime=0,ctx.fillRect(player.x-w,player.y-h,2*w,2*h)),ctx.restore()};Game={map:[],speed:22,v:0,states:{PLAY:0,START:1,GAMEOVER:2},state:1,res:function(){clearInterval(interval),score=0,document.getElementById("menu").setAttribute("score",""+score),document.getElementById("msg1").innerText="Jugar",player.x-=camera.x,player.y-=camera.y,player.Particles=[],0==player.speedy&&(player.speedy=-player.speedx,player.speedx=0),ctx.translate(camera.x,camera.y),camera.x=0,camera.y=0,this.map=[],generateMap(10),this.v=0,animate()},update:function(){player.update(),camera.update(),"v"==this.map[0].dir?this.map[0].y-this.map[0].t>player.y+h/2&&(this.map.shift(),generateMap(1)):this.map[0].y-this.map[0].w>player.y+h/2&&(this.map.shift(),generateMap(1));try{bgsound.currentTime>=bgsound.duration-.5&&(bgsound.currentTime=.6)}catch(t){}},draw:function(){for(i=0;i<this.map.length;i++)this.map[i].update(),this.map[i].draw();if(this.state!=this.states.PLAY&&t(),this.state!=this.states.GAMEOVER)player.draw();else for(p=0;p<player.Particles.length;p++)try{player.Particles[p].update(),player.Particles[p].draw()}catch(t){}}},generateMap(10),cnv.onclick=function(){changedir()},onkeydown=function(t){32==t.keyCode&&changedir()},animate()}function animate(){interval&&clearInterval(interval),interval=setInterval(function(){run()},Game.speed+Game.v)}function run(){ctx.clearRect(camera.x-s/2,camera.y-s/2,s,s),Game.state==Game.states.PLAY&&Game.update(),Game.draw()}var Player=function(){this.x=0,this.y=0,this.r=25*scale,this.speedx=0,this.speedy=-Math.floor(this.r/3),this.bgs=["#55ccff","#55ffcc","#ffcc55","#ffccff","#aa55ff","#ffffff"],this.clrs=["#55ccff22","#55ffcc22","#ffcc5522","#ffccff22","#aa55ff22","#ffffff22"],this.bg=this.bgs[playerbg],this.clr=this.clrs[playerbg],this.p=new Path(0,0,0,0,"v",0,0),this.Particles=[]};Player.prototype.draw=function(){for(this.clr=this.clrs[playerbg],this.bg=this.bgs[playerbg],ctx.save(),ctx.beginPath(),ctx.shadowOffsetX=0,ctx.shadowOffsetY=0,ctx.shadowBlur=4*Math.random()*scale+4*scale,ctx.shadowColor=this.bg,ctx.fillStyle=this.bg,ctx.arc(this.x,this.y,this.r-this.p.linew/2,0,2*Math.PI),ctx.fill(),ctx.restore(),i=0;i<this.Particles.length;i++)this.Particles[i].update(),this.Particles[i].draw()},Player.prototype.update=function(){for(this.x+=this.speedx,this.y+=this.speedy,i=-3;i<3;i++){var t=this.clr;0==this.speedy?this.Particles.push(new Particle(this.x,this.y+i*this.r/(20*scale),0,0,t)):this.Particles.push(new Particle(this.x+i*this.r/(20*scale),this.y,0,0,t))}};var Camera=function(){this.x=0,this.y=0};Camera.prototype.update=function(){ctx.translate(-player.speedx,-player.speedy),this.x+=player.speedx,this.y+=player.speedy};var Path=function(t,e,a,s,i,r,c){this.x=t-r/2,this.y=e,this.w=a,this.t=s,this.dir=i,this.lw=r,this.lt=c,this.linew=8*scale,this.bg="#000011"};Path.prototype.draw=function(){ctx.lineWidth=""+this.linew,"h"==this.dir?(ctx.beginPath(),ctx.fillStyle=this.bg,ctx.fillRect(this.x-this.lw,this.y-this.w,this.t+this.lw,this.w),ctx.beginPath(),ctx.moveTo(this.x,this.y+this.linew/2),ctx.lineTo(this.x+this.t,this.y+this.linew/2),ctx.moveTo(this.x,this.y-this.w),ctx.lineTo(this.x+this.t,this.y-this.w),ctx.moveTo(this.x-this.lw,this.y),ctx.lineTo(this.x-this.lw,this.y-this.w),ctx.lineTo(this.x,this.y-this.w)):(ctx.beginPath(),ctx.fillStyle=this.bg,ctx.fillRect(this.x,this.y-this.t,this.w,this.t+this.lw),ctx.beginPath(),ctx.moveTo(this.x,this.y+this.linew/2),ctx.lineTo(this.x,this.y-this.t),ctx.moveTo(this.x+this.w,this.y),ctx.lineTo(this.x+this.w,this.y-this.t),ctx.moveTo(this.x+this.w,this.y),ctx.lineTo(this.x+this.w,this.y+this.lw+this.linew/2),ctx.lineTo(this.x,this.y+this.lw+this.linew/2)),ctx.stroke(),ctx.closePath()},Path.prototype.update=function(){Game.state!=Game.states.GAMEOVER&&("h"==this.dir?player.y-player.r<=this.y-this.w&&player.x-player.r>=this.x-this.lw&&player.x-player.r<=this.x+this.t&&(Game.state=Game.states.GAMEOVER,explosion(player.x,player.y,"v"),ongover()):player.x+player.r>=this.x+this.w&&player.y+player.r<=this.y+this.lw&&player.y+player.r>=this.y-this.t&&(Game.state=Game.states.GAMEOVER,explosion(player.x,player.y,"h"),ongover()))};var Particle=function(t,e,a,s,i){this.x=t,this.y=e,this.r=25*scale,this.sx=a,this.sy=s,this.clr=i};function changedir(t){if(Game.state==Game.states.PLAY)0==player.speedy&&0==player.speedx?(player.speedy=-player.speedx,player.speedx=0,dict="left"):"right"==t&&"left"==dict?(player.speedx=-player.speedy,player.speedy=0,dict="right",score++):"left"==t&&"right"==dict?(player.speedy=-player.speedx,player.speedx=0,dict="left",score++):window.navigator.vibrate([5]),score>hscore&&(hscore=score,savedata()),score%20==0&&Game.v>-4&&(Game.v-=1,animate()),document.getElementById("menu").setAttribute("score",""+score),document.getElementById("menu").setAttribute("hscore","Mayor puntuación: "+hscore);else if(dict="left",window.navigator.vibrate([2.5,5]),Game.state--,Game.state==Game.states.START)Game.res(),document.getElementById("menu").setAttribute("class","start");else{document.getElementById("menu").setAttribute("class","play");try{document.getElementById("bg").play()}catch(t){}}}function generateMap(t){var e=[160*scale,150*scale,180*scale,0*scale],a=[300*scale,180*scale,150*scale,0*scale,50*scale];0==Game.map.length&&Game.map.push(new Path(0,h/2,1.2*e[2],.8*h>1.8*a[0]?.8*h:1.8*a[0],"v",e[0],a[0]));var s=Game.map.length;for(i=s;i<s+t;i++){ctxColor=["#55ccff","#55ffcc","#ffcc55","#ffccff","#aa55ff","#ffffff"],ctx.strokeStyle=ctxColor[Math.floor(Math.random()*ctxColor.length)];var r=Math.floor(2*Math.random()),c=Math.floor(5*Math.random()),n=Game.map[i-1];"h"==n.dir?Game.map.push(new Path(n.x+n.t+n.w/2,n.y-n.w,e[r],a[c],"v",n.w,n.t)):Game.map.push(new Path(n.x+1.5*n.w,n.y-n.t,e[r],a[c],"h",n.w,n.t))}}function ongover(){window.navigator.vibrate([50,50,200]),document.getElementById("menu").setAttribute("class","gover"),document.getElementById("msg1").innerText="GameOver",document.getElementById("msg2").innerHTML=(score==hscore&&score>0?"Nuevo Record":"Mayor Puntuación")+'</br><span style="font-size:40px;">'+hscore+"<span>",document.getElementById("msg3").innerHTML=score==hscore&&score>0?"":'Tu Puntuación</br><span style="font-size:40px;">'+score+"<span>"}function explosion(t,e,a){try{esound.currentTime=0,esound.play()}catch(t){}player.Particles=[];var s=0,i=0;for(n=0;n<40;n++){if("h"==a){var r=t+player.r,c=e;s=-130*Math.random()*-2*scale*Math.cos(Math.random()*Math.PI/(10*Math.random()*2)),i=126*Math.random()*-1*scale*Math.sin(Math.random()*Math.PI/(10*Math.random()*2))}else{r=t,c=e-player.r;s=130*Math.random()*-2*scale*Math.cos(-Math.random()*Math.PI/(10*Math.random()*-2)),i=126*Math.random()*-1*scale*Math.sin(-Math.random()*Math.PI/(10*Math.random()*-2))}player.Particles.push(new Particle(r,c,Math.random()*s,Math.random()*i,player.clr))}}function changeplayerbg(t){playerbg+t<0?playerbg=player.bgs.length-1:playerbg+t==player.bgs.length?playerbg=0:playerbg+=t,savedata(),window.navigator.vibrate([2.5])}function savedata(){try{localStorage.setItem("zhscore",hscore),localStorage.setItem("zplayerBg",playerbg)}catch(t){}}function getdata(){try{localStorage.getItem("zhscore")&&(hscore=localStorage.getItem("zhscore"),playerbg=1*localStorage.getItem("zplayerBg"))}catch(t){}}Particle.prototype.draw=function(){ctx.beginPath(),ctx.fillStyle=this.clr,ctx.arc(this.x,this.y,this.r,0,2*Math.PI),ctx.fill()},Particle.prototype.update=function(){this.r*=.5*Math.random()+.65,this.x+=this.sx,this.y+=this.sy,this.r<=7.5*scale*.15&&player.Particles.splice(player.Particles.indexOf(this),1)};
+</script>
+    </body>
+</html>
